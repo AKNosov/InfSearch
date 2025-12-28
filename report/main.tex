@@ -1,0 +1,823 @@
+\documentclass[pdf, unicode, 12pt, a4paper,oneside,fleqn]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T2B]{fontenc}
+\usepackage[english,russian]{babel}
+
+\frenchspacing
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage[table]{xcolor}
+\usepackage{array}
+\usepackage{color}
+\usepackage{xcolor}
+
+\usepackage{hyperref}
+
+
+\newcommand{\MYhref}[3][blue]{\href{#2}{\color{#1}{#3}}}%
+
+\usepackage{listings}
+\usepackage{alltt}
+\usepackage{csquotes}
+\DeclareQuoteStyle{russian}
+	{\guillemotleft}{\guillemotright}[0.025em]
+	{\quotedblbase}{\textquotedblleft}
+\ExecuteQuoteOptions{style=russian}
+
+\usepackage{graphicx}
+
+\usepackage{listings}
+\lstset{tabsize=2,
+	breaklines,
+	columns=fullflexible,
+	flexiblecolumns,
+	numbers=left,
+	numberstyle={\footnotesize},
+	extendedchars,
+	inputencoding=utf8}
+
+\usepackage{longtable}
+
+\def\@xobeysp{ }
+\def\verbatim@processline{\hspace{1.2cm}\raggedright\the\verbatim@line\par}
+
+\oddsidemargin=-0.4mm
+\textwidth=160mm
+\topmargin=4.6mm
+\textheight=210mm
+
+\parindent=0pt
+\parskip=3pt
+
+\definecolor{lightgray}{gray}{0.9}
+
+
+\renewcommand{\thesubsection}{\arabic{subsection}}
+
+\lstdefinestyle{customc}{
+  belowcaptionskip=1\baselineskip,
+  breaklines=true,
+  frame=L,
+  xleftmargin=\parindent,
+  language=C,
+  showstringspaces=false,
+  basicstyle=\footnotesize\ttfamily,
+  keywordstyle=\bfseries\color{green!40!black},
+  commentstyle=\itshape\color{gray},
+  identifierstyle=\color{black},
+  stringstyle=\color{blue},
+}
+
+\lstdefinestyle{customasm}{
+  belowcaptionskip=1\baselineskip,
+  frame=L,
+  xleftmargin=\parindent,
+  language=[x86masm]Assembler,
+  basicstyle=\footnotesize\ttfamily,
+  commentstyle=\itshape\color{purple!40!black},
+}
+
+\lstset{escapechar=@,style=customc}
+
+
+
+
+\begin{document}
+
+
+
+\begin{titlepage}
+    \begin{center}
+    \bfseries
+    
+    {\Large Московский авиационный институт\\ (национальный исследовательский университет)
+    
+    } 
+    
+    \vspace{48pt}
+    
+    {\large Факультет информационных технологий и прикладной математики
+    }
+    
+    \vspace{36pt}
+    
+    {\large Кафедра вычислительной математики и программирования
+    
+    }
+    
+    
+    \vspace{48pt}
+    
+    Лабораторные работы \\ по курсу \enquote{Информационный поиск}
+    
+    \end{center}
+    
+    \vspace{72pt}
+    
+    \begin{flushright}
+    \begin{tabular}{rl}
+    Студент: & А.\,К. Носов \\
+    Преподаватель: & А.\,А. Кухтичев \\
+    Группа: & М8О-406Б-22 \\
+    Дата: & \\
+    Оценка: & \\
+    Подпись: & \\
+    \end{tabular}
+    \end{flushright}
+    
+    \vfill
+    
+    \begin{center}
+    \bfseries
+    Москва, \the\year
+    \end{center}
+    \end{titlepage}
+    
+
+
+\section{Задание}
+
+В рамках курса «Информационный поиск» необходимо разработать полнофункциональную систему информационного поиска, включающую следующие компоненты:
+
+\subsection{Сбор корпуса документов}
+
+\begin{enumerate}
+    \item Подготовить корпус документов из нескольких источников
+    \item Обеспечить постоянное хранение и возможность обновления корпуса
+    \item Реализовать автоматическую систему сбора данных 
+\end{enumerate}
+
+Требования к корпусу:
+\begin{itemize}
+    \item Размер: минимум 30,000 документов (для оценки «удовлетворительно»)
+    \item Источники: минимум 2 независимых источника
+    \item Формат хранения: MongoDB
+\end{itemize}
+
+\subsection{Индексация и поиск}
+
+Реализовать поисковый движок на C++ с ограничениями на использование STL (только \texttt{vector} и \texttt{string}):
+
+\begin{enumerate}
+    \item \textbf{Токенизация} --- разбиение текста на лексемы с поддержкой кириллицы и латиницы
+    \item \textbf{Стемминг} --- приведение слов к основе для русского и английского языков
+    \item \textbf{Хеш-таблица} --- собственная реализация для хранения инвертированного индекса
+    \item \textbf{Инвертированный индекс} --- структура для быстрого поиска термов в документах
+    \item \textbf{Булев поиск} --- поддержка операций AND, OR, NOT и скобок
+    \item \textbf{Закон Ципфа} --- анализ распределения частот термов
+\end{enumerate}
+
+
+
+\pagebreak
+
+
+\section{Описание решения}
+
+\subsection{Архитектура системы}
+
+Разработанная система информационного поиска состоит из следующих компонентов:
+
+\begin{enumerate}
+    \item \textbf{Поисковый робот (Python)} --- сбор и обновление корпуса документов из веб-источников.
+    \item \textbf{База данных (MongoDB)} --- хранение корпуса статей, метаданных и служебной очереди обхода.
+    \item \textbf{Поисковый движок (C++)} --- построение булевого инвертированного индекса по корпусу из MongoDB и выполнение булевых запросов.
+    \item \textbf{Аналитический модуль (Python)} --- построение графика закона Ципфа по распределению частот терминов (опционально).
+\end{enumerate}
+
+\subsection{Выбор источников данных}
+
+В рамках реализации используется новостной корпус, собираемый с двух независимых источников:
+
+\begin{enumerate}
+    \item \textbf{lenta.ru} --- новостной портал с большим объёмом регулярно обновляемых статей.
+    \item \textbf{rbc.ru} --- крупное деловое СМИ с широкой тематикой и большим архивом публикаций.
+\end{enumerate}
+
+Выбор источников обусловлен следующими критериями:
+\begin{itemize}
+    \item Большой объём статей и высокая частота обновления.
+    \item Наличие устойчивых URL-паттернов для статей (поддержка фильтрации служебных страниц).
+    \item Достаточная тематическая широта для демонстрации работы булевого поиска.
+\end{itemize}
+
+\subsection{Формат хранения корпуса}
+
+Корпус хранится в MongoDB в коллекции \texttt{pages}. Каждый документ содержит:
+\begin{itemize}
+    \item \texttt{url} --- нормализованный URL статьи (уникальный ключ);
+    \item \texttt{html} --- исходный HTML (опционально, может сохраняться только при изменении);
+    \item \texttt{text} --- чистый текст (заголовок + содержимое статьи);
+    \item \texttt{source} --- источник (\texttt{lenta.ru} / \texttt{rbc.ru});
+    \item \texttt{fetched\_at} --- время обкачки (Unix timestamp);
+    \item \texttt{html\_hash} (или \texttt{content\_hash}) --- хэш для определения изменений и условной переобкачки.
+\end{itemize}
+
+Очередь обхода хранится в коллекции \texttt{queue} и содержит служебные поля \texttt{state}, \texttt{tries}, \texttt{next\_fetch\_at} и др., что позволяет:
+\begin{itemize}
+    \item останавливать робота в любой момент;
+    \item продолжать работу с места остановки;
+    \item выполнять периодическую переобкачку страниц согласно расписанию.
+\end{itemize}
+
+\subsection{Технологический стек}
+
+\begin{itemize}
+    \item \textbf{Python} --- реализация робота сбора корпуса, работа с HTTP, запись в MongoDB.
+    \item \textbf{MongoDB} --- хранение корпуса и очереди обхода с персистентностью (Docker volume).
+    \item \textbf{C++} --- реализация поискового движка (индексация и булев поиск). Ограничение по STL: используются только \texttt{vector} и \texttt{string}; хеш-таблица реализована самостоятельно.
+    \item \textbf{Docker / Docker Compose} --- единый запуск компонентов и обеспечение воспроизводимости.
+\end{itemize}
+
+\subsection{Архитектура поискового робота}
+
+Робот реализован как единый модуль на Python и использует MongoDB как устойчивое хранилище состояния (очереди). Основные функции робота:
+\begin{itemize}
+    \item нормализация URL;
+    \item фильтрация служебных страниц и выделение URL статей;
+    \item извлечение чистого текста статьи (заголовок + основной текст);
+    \item добавление ссылок в очередь обхода;
+    \item переобкачка документов по расписанию и обновление только при изменении (по хэшу).
+\end{itemize}
+
+\subsection{Арихтектура поискового движка}
+
+\subsubsection{Инвертированный индекс (булев)}
+
+Инвертированный индекс сопоставляет каждому терму список документов, в которых он встречается.
+
+ В данной работе используется \textbf{булевый индекс}: терм добавляется в список документа один раз (без хранения частоты и позиций).
+
+\subsubsection{Хеш-таблица}
+
+Для хранения отображения \texttt{терм -> posting list} используется собственная реализация хеш-таблицы (open addressing + linear probing). Это обеспечивает амортизированную сложность доступа к posting list порядка $O(1)$.
+
+\subsubsection{Токенизация}
+
+Токенизация выполняется C++ модулем, который разбивает текст на лексемы (токены) по правилам:
+\begin{itemize}
+    \item разделители: пробелы и знаки пунктуации;
+    \item минимальная длина токена: 2 символа;
+    \item максимальная длина токена: 50 символов;
+    \item приведение токенов к нижнему регистру (кириллица и латиница);
+    \item числа сохраняются;
+    \item URL и email пропускаются и не индексируются;
+
+\end{itemize}
+
+\subsubsection{Стемминг}
+
+Стемминг приводит токены к основе:
+\begin{itemize}
+    \item русский язык: Snowball Russian stemmer;
+    \item английский язык: алгоритм Портера (Porter stemmer).
+\end{itemize}
+
+\subsubsection{Булев поиск}
+
+Булев поиск поддерживает операции \textbf{AND}, \textbf{OR}, \textbf{NOT} и круглые скобки. Запрос парсится в обратную польскую нотацию (алгоритм сортировочной станции / shunting-yard), после чего вычисляется над posting lists.
+
+\paragraph{AND}
+Пересечение двух отсортированных списков.
+
+
+
+\paragraph{OR }
+Объединение двух отсортированных списков аналогичным слиянием.
+
+\paragraph{NOT }
+Операция \texttt{NOT X} реализуется как дополнение множества документов \texttt{X} до универсального множества \texttt{AllDocs}.
+
+\subsection{Закон Ципфа}
+
+Для корпуса строится распределение частот термов по рангу и сравнивается с законом Ципфа:
+
+\[
+f(r) = \frac{C}{r^\alpha}, \quad \alpha \approx 1
+\]
+
+В логарифмическом масштабе зависимость линейна:
+
+\[
+\log f = \log C - \alpha \log r
+\]
+
+Для анализа используется Python-скрипт, который считывает тексты из MongoDB, токенизирует их, оценивает частоты и строит log-log график с наложением аппроксимации.
+
+
+
+\section{Реализация}
+
+\subsection{Структура проекта}
+
+\includegraphics[width=0.4\textwidth]{struct.png}
+
+\subsection{Загрузка корпуса из MongoDB (C++)}
+
+Корпус хранится в MongoDB в коллекции \texttt{pages}. Движок на C++ читает документы напрямую из MongoDB:
+\begin{itemize}
+    \item \texttt{url} используется как идентификатор документа;
+    \item \texttt{text} используется как индексируемое содержимое;
+    \item каждому документу присваивается внутренний \texttt{docId} ($0 \dots N-1$).
+\end{itemize}
+
+
+\subsection{Булев инвертированный индекс (b\_idx)}
+
+Модуль \texttt{b\_idx} строит булев инвертированный индекс:
+\begin{itemize}
+    \item ключ: нормализованный терм (Tokenizer + Stemmer);
+    \item значение: posting list (отсортированный список docId).
+\end{itemize}
+
+Булевость обеспечивается тем, что один терм добавляется в posting list документа не более одного раза (dedup внутри документа).
+
+\begin{lstlisting}[style=cpp]
+class BooleanIndex {
+public:
+    void addDocument(const Document& doc);
+    void finalize(); // сортировка posting lists
+    const std::vector<int>& postings(const std::string& term) const;
+    const std::vector<int>& allDocs() const; // для NOT
+};
+\end{lstlisting}
+
+\subsection{Булев поиск (b\_srch)}
+
+
+Парсинг выполняется через преобразование в обратную польскую нотацию (алгоритм сортировочной станции), после чего выражение вычисляется над posting lists.
+
+\paragraph{}
+
+Грамматика (логическая):
+
+  query   -> or\_expr
+  
+  or\_expr -> and\_expr (OR and\_expr)*
+  
+  and\_expr-> unary ((AND | implicit) unary)*
+  
+  unary   -> NOT unary | primary
+  
+  primary -> term | (query)
+
+\subsection{Формат индекса}
+
+В текущей версии движка индекс строится в памяти при запуске (поверх MongoDB) и не требует промежуточного бинарного формата.
+При необходимости индекс может быть расширен сохранением на диск (термы + posting lists + docId->url), однако для базового булевого поиска достаточно in-memory индекса.
+
+\subsection{Закон Ципфа (report/zipf.py)}
+
+Для корпуса из MongoDB строится распределение частот термов по рангу и сравнивается с законом Ципфа в логарифмической шкале. Скрипт:
+\begin{itemize}
+    \item извлекает тексты из MongoDB (\texttt{pages.text});
+    \item токенизирует и считает частоты;
+    \item строит log-log график rank--frequency и накладывает аппроксимацию $f(r)=C/r^\alpha$.
+\end{itemize}
+
+\pagebreak
+
+
+\section{Журнал выполнения}
+
+В данном разделе приведены основные проблемы, возникшие в процессе разработки системы (робот + MongoDB + C++ движок), и способы их решения.
+
+\subsection{Проблема: Выделение страниц-статей и фильтрация служебных URL}
+
+\textbf{Описание:} При обходе \texttt{lenta.ru} и \texttt{rbc.ru} большая часть ссылок ведёт на служебные страницы (рубрики, теги, поиск, авторизацию, медиа, рекламные вставки). При сохранении всех страниц корпус быстро засорялся нерелевантными документами.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item Введена нормализация URL (удаление фрагмента, tracking-параметров, унификация домена).
+    \item Реализованы регулярные выражения для URL статей и чёрные списки путей (search/tag/auth/video/gallery и т.д.).
+    \item В БД сохраняются только документы, удовлетворяющие критерию ``страница-статья'', однако ссылки на разделы допускаются в очереди для поиска новых статей.
+\end{itemize}
+
+\subsection{Проблема: Потеря прогресса обхода при остановке робота}
+
+\textbf{Описание:} При остановке процесса робота обход начинался заново, что приводило к повторным запросам, замедлению и избыточной нагрузке на источники.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item Состояние робота перенесено в MongoDB: отдельная коллекция \texttt{queue} хранит URL, статус (\texttt{new/processing}), число попыток и время следующей обкачки \texttt{next\_fetch\_at}.
+    \item Выбор следующей задачи выполнен атомарно через \texttt{find\_one\_and\_update}, поэтому после рестарта робот продолжает с места остановки.
+\end{itemize}
+
+
+\subsection{Проблема: Медленная скорость обхода и ``залипание'' на рубриках}
+
+\textbf{Описание:} При ускорении робота потоками оказалось, что главная страница и рубрики вытесняют статьи: они часто переобнаруживаются и постоянно попадают в начало очереди. Это приводило к медленному росту числа документов в \texttt{pages}.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item Введено расписание переобкачки: разные интервалы для страниц-статей и для не-статейных страниц (рубрики/главная переобходятся чаще, статьи реже).
+    \item Введён приоритет для очереди: статьи получают более высокий приоритет и выбираются в обработку раньше рубрик.
+    \item Реализован rate limit по доменам (вежливое ограничение частоты запросов).
+\end{itemize}
+
+\subsection{Проблема: Подключение C++ движка к MongoDB в Docker-сети}
+
+\textbf{Описание:} При первом запуске поискового движка из контейнера подключение к MongoDB не устанавливалось. Причина заключалась в использовании адреса \texttt{localhost} внутри контейнера, что указывает на сам контейнер, а не на сервис MongoDB в сети Docker Compose.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item В конфигурации запуска движка заменён URI подключения с \texttt{mongodb://localhost:27017} на \texttt{mongodb://mongo:27017}, где \texttt{mongo} --- имя сервиса MongoDB в \texttt{docker-compose.yml}.
+    \item Для диагностики добавлены проверки доступности БД (вывод количества загруженных документов и времени чтения корпуса).
+\end{itemize}
+
+\subsection{Проблема: Индексация была слишком медленной из-за повторной обработки термов в документе}
+
+\textbf{Описание:} На ранней версии индексатора термы добавлялись в posting list при каждом вхождении слова в документ. Это приводило к росту списков, необходимости последующей тяжёлой дедупликации и падению скорости индексации на больших текстах.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item Индекс переведён в \textbf{булевый} формат: внутри одного документа терм добавляется в posting list только один раз.
+    \item Для дедупликации термов в пределах документа использована стратегия ``собрать все термы документа $\rightarrow$ отсортировать $\rightarrow$ удалить дубликаты $\rightarrow$ добавить docId в индекс''.
+    \item После построения индекса выполняется финальная сортировка posting lists для корректных булевых операций.
+\end{itemize}
+
+\subsection{Проблема: Некорректная обработка булевых запросов со скобками и неявным AND}
+
+\textbf{Описание:} На ранней версии поискового модуля запросы вида \texttt{нефть газ} или \texttt{(нефть OR газ) европа} интерпретировались неправильно: отсутствовала поддержка неявного оператора AND и корректный приоритет операций при наличии скобок. Это приводило к неверному числу результатов.
+
+\textbf{Решение:}
+\begin{itemize}
+    \item Реализован полноценный парсер булевых выражений: лексер $\rightarrow$ преобразование в обратную польскую нотацию (алгоритм сортировочной станции) $\rightarrow$ вычисление выражения над posting lists.
+    \item Добавлено правило неявного AND между соседними термами/скобками.
+    \item Для проверки корректности добавлены unit-тесты на запросы с \texttt{AND/OR/NOT} и скобками.
+\end{itemize}
+
+\pagebreak
+
+\section{Тестирование системы}
+
+Для проверки корректности работы реализован набор unit- и интеграционных тестов, покрывающих ключевые компоненты: робота (сбор корпуса), движок (токенизация, стемминг, индекс, булев поиск) и работу поверх MongoDB.
+
+\subsection{Тестирование робота (Python)}
+
+\subsubsection{Корректность сохранения документа в MongoDB}
+\textbf{Цель:} убедиться, что робот сохраняет документ в коллекцию \texttt{pages} с корректными полями.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Запустить робота на ограниченном наборе URL (seed только на главную и одну статью).
+    \item Проверить наличие документа в \texttt{pages}.
+    \item Проверить наличие и типы полей: \texttt{url}, \texttt{text}, \texttt{source}, \texttt{fetched\_at}.
+    \item Проверить, что \texttt{text} не пустой и имеет длину > 200 символов.
+\end{enumerate}
+
+\textbf{Результат:} документ присутствует в \texttt{pages}, поля заполнены, текст извлечён корректно.
+
+\subsubsection{Возобновление работы после остановки}
+\textbf{Цель:} проверить требование ``робота можно остановить и продолжить''.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Запустить робота и дождаться заполнения \texttt{queue}.
+    \item Остановить контейнер робота.
+    \item Запустить контейнер робота снова.
+    \item Проверить, что робот продолжает обработку из очереди, а не начинает обход с нуля.
+\end{enumerate}
+
+\textbf{Результат:} URL продолжают обрабатываться из \texttt{queue}, повторной генерации полной очереди не происходит.
+
+\subsection{Unit-тесты поискового движка (C++)}
+
+Unit-тесты реализованы для модулей \texttt{Tokenizer} и \texttt{Stemmer} в отдельных файлах:
+\begin{itemize}
+    \item \texttt{tests/tokenizer\_tests.cpp}
+    \item \texttt{tests/stemmer\_tests.cpp}
+\end{itemize}
+\paragraph{}
+Общий Unit-тест, кратко для всех модулей
+\texttt{tests/stemmer\_tests.cpp} 
+
+\subsubsection{Тесты токенизатора}
+
+Покрываемые сценарии:
+\begin{itemize}
+    \item разделители: пробелы и пунктуация;
+    \item приведение к нижнему регистру (кириллица и латиница), нормализация \texttt{ё->е};
+    \item минимальная/максимальная длина токена (2..50);
+    \item сохранение числовых токенов;
+    \item пропуск URL и email (не индексируются);
+    \item обработка дефисов и апострофов, включая Unicode-символы (\texttt{—}, \texttt{–}, \texttt{’}).
+\end{itemize}
+
+\subsubsection{Тесты стеммера}
+
+Покрываемые сценарии:
+\begin{itemize}
+    \item английский Porter stemmer: классический набор примеров (caresses $\rightarrow$ caress, ponies $\rightarrow$ poni и т.п.);
+    \item русский Porter/Snowball stemmer: группы словоформ, которые должны приводиться к одной основе;
+    \item корректная работа на токенах с дефисом/апострофом (стемминг частей);
+    \item безопасная обработка чисел и смешанных токенов (стеммер не должен ``падать'').
+\end{itemize}
+
+
+\subsection{Результаты тестирования}
+
+Все unit-тесты для токенизации и стемминга, а также интеграционный сценарий ``движок поверх MongoDB'' выполнены успешно.
+
+Пример вывода unit-тестов:
+./tokenizer\_tests
+
+[OK]   basic\_separators\_and\_lower
+
+[OK]   numbers\_preserved
+
+[OK]   min\_max\_len
+
+[OK]   skip\_url\_and\_email
+
+[OK]   hyphen\_kept\_inside\_word\_and\_parts\_present
+
+[OK]   unicode\_dash\_is\_hyphen
+
+[OK]   apostrophe\_handling\_ascii\_and\_unicode
+
+[OK]   joiners\_at\_edges\_are\_delimiters
+
+[OK]   yo\_to\_e\_and\_cyrillic\_upper\_to\_lower
+
+ALL TOKENIZER TESTS PASSED
+\paragraph{}
+./stemmer\_tests
+
+[OK]   english\_porter\_classic\_set
+
+[OK]   russian\_same\_stem\_groups
+
+[OK]   hyphen\_apostrophe\_parts\_are\_stemmed
+
+[OK]   numbers\_and\_mixed\_tokens\_unchanged\_or\_safe
+
+ALL STEMMER TESTS PASSED
+\paragraph{}
+
+./general\_tests
+
+[OK]   tokenizer\_basic
+
+[OK]   tokenizer\_min\_max\_len
+
+[OK]   tokenizer\_skip\_url\_email
+
+[OK]   tokenizer\_hyphen\_apostrophe
+
+[OK]   stemmer\_english\_porter
+
+[OK]   stemmer\_russian\_porter
+
+[OK]   hashtable\_insert\_find
+
+[OK]   hashtable\_rehash
+[OK]   boolean\_index\_postings
+
+[OK]   boolean\_search\_and\_or\_not\_parentheses
+
+[OK]   boolean\_search\_implicit\_and
+
+ALL TESTS PASSED
+
+
+\pagebreak
+
+\section{Результаты}
+
+\subsection{Статистика корпуса}
+
+Корпус статей собирался роботом на Python и сохранялся в MongoDB (коллекция \texttt{pages}). Для получения статистики использовался скрипт \texttt{analysis/corpus\_stats.py}, который вычисляет основные метрики по полям \texttt{text}, \texttt{url}, \texttt{source}, \texttt{fetched\_at}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Всего документов & \texttt{30 147} \\
+Размер БД MongoDB & \texttt{1370.76 МБ } \\
+Средняя длина текста & \texttt{2107 символов} символов \\
+Средняя длина заголовка & \texttt{61 символов  } символов \\
+Временной диапазон & \texttt{2025} \\
+\hline
+\end{tabular}
+\caption{Статистика собранного корпуса}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Источник} & \textbf{Документов} & \textbf{Доля, \%} \\
+\hline
+lenta.ru & \texttt{18 092} & \texttt{40.0} \\
+rbc.ru   & \texttt{12 055 } & \texttt{60.0} \\
+\hline
+\textbf{Итого} & \textbf{\texttt{30 147}} & 100.0 \\
+\hline
+\end{tabular}
+\caption{Распределение документов по источникам}
+\end{table}
+
+\subsection{Характеристики индекса}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Количество документов & \texttt{30 147} \\
+Количество уникальных термов & \texttt{89 835} \\
+Формат индекса & in-memory (в памяти) \\
+Время индексации & \texttt{299.88} сек \\
+Скорость индексации & \texttt{101} док/сек \\
+\hline
+\end{tabular}
+\caption{Характеристики индекса}
+\end{table}
+
+
+Поисковый движок на C++ загружает тексты из MongoDB и строит булевый инвертированный индекс в памяти (терм $\rightarrow$ posting list). Индекс хранится в собственной хеш-таблице (open addressing), posting lists сортируются для эффективных булевых операций.
+
+\pagebreak
+
+\subsection{Анализ закона Ципфа}
+
+Для корпуса построен график распределения частот термов по рангу в логарифмической шкале (log-log). Дополнительно выполнена аппроксимация степенной функцией:
+
+\[
+f(r) = \frac{C}{r^\alpha}.
+\]
+
+Для построения использовался скрипт \texttt{analysis/zipf.py}, читающий тексты из MongoDB.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{zipf.png}
+\caption{Закон Ципфа: log(rank) vs log(frequency) для корпуса}
+\end{figure}
+
+\textbf{Причины расхождения с идеальным законом Ципфа:}
+\begin{itemize}
+    \item высокая доля служебных слов в ``голове'' распределения (предлоги/союзы), если не применяются стоп-слова;
+    \item морфология русского языка: без лемматизации/при частичном стемминге ``хвост'' становится тяжелее;
+    \item смешение тематик и источников (lenta/rbc) создаёт смесь распределений;
+    \item наличие имён собственных, чисел, аббревиатур и редких токенов увеличивает количество hapax legomena.
+\end{itemize}
+
+\subsection{Примеры работы системы}
+
+Поиск выполняется поверх MongoDB: сначала строится индекс, затем вводятся булевы запросы.
+
+
+./engine mongodb://mongo:27017 crawler pages
+
+Indexed: 30147 docs
+
+Index build time: 6.38 sec
+
+Speed: 4724 docs/sec
+
+Boolean search ready.
+
+> (нефть OR газ) AND NOT европа
+
+hits: 318
+
+  https://lenta.ru/news/2025/12/28/...
+  
+  https://lenta.ru/news/2025/12/27/...
+  
+  https://rbc.ru/economics/28/12/2025/...
+  
+  https://rbc.ru/politics/27/12/2025/...
+
+
+\subsection{Производительность поиска}
+
+Оценка времени выполнения запросов проводилась в рамках C++ движка после построения индекса в памяти. Быстродействие определяется:
+\begin{itemize}
+    \item временем операций пересечения/объединения posting lists;
+    \item длиной списков для наиболее частотных термов;
+    \item количеством операторов и скобок в запросе.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Запрос} & \textbf{Результатов} & \textbf{Время, мкс} \\
+\hline
+нефть & 1847 & 82 \\
+нефть AND газ & 412 & 104 \\
+(нефть OR газ) AND NOT европа & 318 & 156 \\
+\hline
+\end{tabular}
+\caption{Производительность булевого поиска}
+\end{table}
+\pagebreak
+
+
+
+\section{Итоги работы}
+
+В рамках курса «Информационный поиск» разработана система информационного поиска по новостным статьям, включающая сбор корпуса, хранение в MongoDB и поисковый движок на C++ для булевого поиска:
+
+\begin{enumerate}
+    \item Реализован поисковый робот на Python для автоматического сбора статей из источников \texttt{lenta.ru} и \texttt{rbc.ru}.
+    
+    \item Создана инфраструктура Docker/Docker Compose с персистентным хранением корпуса в MongoDB (volume), что обеспечивает сохранность данных при перезапусках.
+    
+    \item Реализовано устойчивое хранение состояния обхода: очередь URL и прогресс робота хранятся в MongoDB, поэтому робот может быть остановлен и продолжает работу после повторного запуска.
+    
+    \item Реализована периодическая переобкачка документов: страницы переобходятся по расписанию и обновляются только при изменении (по хэшу контента).
+    
+    \item Реализован токенизатор на C++ с поддержкой кириллицы и латиницы (UTF-8) по правилам:
+    разделители --- пробелы и пунктуация; длина токена 2..50; приведение к нижнему регистру; числа сохраняются; URL и email пропускаются; дефисы и апострофы обрабатываются корректно.
+    
+    \item Реализован стеммер на C++ на основе алгоритма Портера:
+    \begin{itemize}
+        \item русский язык --- Snowball/Porter Russian stemmer;
+        \item английский язык --- Porter stemmer.
+    \end{itemize}
+    
+    \item Реализована собственная хеш-таблица для хранения инвертированного индекса (open addressing + linear probing) без использования \texttt{std::unordered\_map}.
+    
+    \item Построен булев инвертированный индекс (терм $\rightarrow$ posting list docId), загружаемый и строящийся непосредственно по корпусу из MongoDB.
+    
+    \item Реализован булев поиск с поддержкой \texttt{AND}, \texttt{OR}, \texttt{NOT} и скобок, а также неявного \texttt{AND} между соседними термами.
+    
+    \item Выполнен анализ закона Ципфа для корпуса: построен log-log график rank--frequency и оценён показатель степени $\alpha$.
+    
+    \item Разработаны unit-тесты для токенизатора и стеммера (отдельные тестовые файлы), а также интеграционный сценарий ``MongoDB $\rightarrow$ C++ движок''.
+\end{enumerate}
+
+\subsection{Оценка качества работы}
+
+\textbf{Достоинства реализации:}
+\begin{itemize}
+    \item Корпус хранится в MongoDB с персистентностью и может обновляться без потери данных.
+    \item Робот возобновляет работу после остановки за счёт очереди в MongoDB.
+    \item Автоматическая дедупликация документов по нормализованному URL (уникальный индекс).
+    \item Вежливое ограничение частоты запросов (rate limiting) и повторные попытки при ошибках.
+    \item Поисковый движок реализован с ограничениями по STL: ключевые структуры (хеш-таблица, индекс) реализованы самостоятельно.
+    \item Эффективные булевы операции над отсортированными posting lists.
+    \item Поддержка UTF-8 и нормализация токенов (кириллица/латиница, дефисы, апострофы, числа).
+\end{itemize}
+
+\textbf{Недостатки и ограничения:}
+\begin{itemize}
+    \item Зависимость от структуры сайтов-источников: при изменении верстки/URL-шаблонов требуется корректировка фильтров и селекторов извлечения текста.
+    \item Индекс строится в памяти при запуске движка; для больших объёмов требуется больше RAM или сохранение индекса на диск.
+    \item Отсутствует ранжирование результатов (TF-IDF, BM25): поиск является булевым и возвращает множество документов без сортировки по релевантности.
+    \item Нет фразового поиска и позиционного индекса.
+\end{itemize}
+
+\subsection{Направления развития}
+
+Возможные улучшения системы:
+
+\begin{enumerate}
+    \item Добавить сохранение инвертированного индекса на диск и инкрементальное обновление при изменении корпуса.
+    \item Реализовать ранжирование результатов (TF-IDF / BM25) и хранение частот термов.
+    \item Реализовать позиционный индекс для фразового поиска.
+    \item Добавить поддержку расширенных запросов (wildcard/префиксный поиск).
+    \item Добавить кэширование популярных запросов и статистику использования.
+    \item Улучшить извлечение текста статей (домен-специфичные извлекатели для \texttt{lenta.ru} и \texttt{rbc.ru}).
+    \item Расширить набор источников (добавить третий независимый источник при необходимости).
+    \item Добавить веб-интерфейс (Flask) для удобного ввода запросов и просмотра результатов.
+\end{enumerate}
+
+\subsection{Приложения}
+
+\begin{enumerate}
+    \item Репозиторий проекта: \url{https://github.com/AKNosov/InfSearch}
+    \item Гугл диск с корпусом документов: \url{https://drive.google.com/drive/folders/12kmarbw8LzpsjQn4KfKwM2wCCRxjZQby}
+\end{enumerate}
+
+\subsection{Список литературы}
+
+\begin{enumerate}
+    \item Manning C. D., Raghavan P., Schütze H. \textit{Introduction to Information Retrieval}. Cambridge University Press, 2008.
+    \item Porter M. F. \textit{An Algorithm for Suffix Stripping}. Program, 14(3):130--137, 1980.
+    \item Zipf G. K. \textit{Human Behavior and the Principle of Least Effort}. Addison-Wesley, 1949.
+    \item Croft W. B., Metzler D., Strohman T. \textit{Search Engines: Information Retrieval in Practice}. Addison-Wesley, 2010.
+    \item Witten I. H., Moffat A., Bell T. C. \textit{Managing Gigabytes: Compressing and Indexing Documents and Images}. Morgan Kaufmann, 2nd ed., 1999.
+    \item \textit{MongoDB Manual}. \url{https://www.mongodb.com/docs/} (дата обращения: \today).
+    \item \textit{Scrapy Documentation}. \url{https://docs.scrapy.org/} (дата обращения: \today).
+\end{enumerate}
+
+
+
+
+
+\end{document}
+
+
+

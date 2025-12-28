@@ -1,0 +1,19 @@
+db:
+  uri: "mongodb://mongo:27017"
+  database: "crawler"
+  pages_collection: "pages"
+  queue_collection: "queue"
+
+logic:
+  delay_seconds: 0.1            
+  workers: 8                  
+  per_source_limit: 15000
+  request_timeout: 15
+  max_retries: 3
+  recrawl_after_seconds: 604800 
+  non_article_refetch_seconds: 120
+  links_per_page: 500
+
+seeds:
+  - "https://www.rbc.ru/"
+  - "https://lenta.ru/"

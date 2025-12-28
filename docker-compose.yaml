@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  robot:
+    build: .
+    container_name: robot
+    restart: unless-stopped
+    depends_on:
+      - mongo
+    working_dir: /app
+    command: ["python", "s_robot.py", "config.yaml"]
+    volumes:
+      - ./s_robot/s_robot.py:/app/s_robot.py:ro
+      - ./s_robot/config.yaml:/app/config.yaml:ro
+    
+  engine:
+    build:
+      context: ./engine
+    container_name: search-engine
+    depends_on:
+      - mongo
+    tty: true
+    stdin_open: true
+    command: ["./engine", "mongodb://mongo:27017", "crawler", "pages"]
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
