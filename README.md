@@ -98,6 +98,17 @@ docker compose run --rm engine ./engine mongodb://mongo:27017 crawler pages
 
 ---
 
+## 5. Запуск тестов
+
+g++ -std=c++17 -O2 \
+  ./tests/general_tests.cpp \
+  ./engine/Tokenizer.cpp ./engine/Stemmer.cpp ./engine/HashTable.cpp \
+  ./engine/b_idx.cpp ./engine/b_srch.cpp \
+  -o tests_run
+./tests_run
+
+---
+
 
 
 
