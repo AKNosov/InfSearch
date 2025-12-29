@@ -1,0 +1,72 @@
+
+
+\section{Реализация}
+
+\subsection{Структура проекта}
+
+\includegraphics[width=0.4\textwidth]{struct.png}
+
+\subsection{Загрузка корпуса из MongoDB (C++)}
+
+Корпус хранится в MongoDB в коллекции \texttt{pages}. Движок на C++ читает документы напрямую из MongoDB:
+\begin{itemize}
+    \item \texttt{url} используется как идентификатор документа;
+    \item \texttt{text} используется как индексируемое содержимое;
+    \item каждому документу присваивается внутренний \texttt{docId} ($0 \dots N-1$).
+\end{itemize}
+
+
+\subsection{Булев инвертированный индекс (b\_idx)}
+
+Модуль \texttt{b\_idx} строит булев инвертированный индекс:
+\begin{itemize}
+    \item ключ: нормализованный терм (Tokenizer + Stemmer);
+    \item значение: posting list (отсортированный список docId).
+\end{itemize}
+
+Булевость обеспечивается тем, что один терм добавляется в posting list документа не более одного раза (dedup внутри документа).
+
+\begin{lstlisting}[style=cpp]
+class BooleanIndex {
+public:
+    void addDocument(const Document& doc);
+    void finalize(); // сортировка posting lists
+    const std::vector<int>& postings(const std::string& term) const;
+    const std::vector<int>& allDocs() const; // для NOT
+};
+\end{lstlisting}
+
+\subsection{Булев поиск (b\_srch)}
+
+
+Парсинг выполняется через преобразование в обратную польскую нотацию (алгоритм сортировочной станции), после чего выражение вычисляется над posting lists.
+
+\paragraph{}
+
+Грамматика (логическая):
+
+  query   -> or\_expr
+  
+  or\_expr -> and\_expr (OR and\_expr)*
+  
+  and\_expr-> unary ((AND | implicit) unary)*
+  
+  unary   -> NOT unary | primary
+  
+  primary -> term | (query)
+
+\subsection{Формат индекса}
+
+В текущей версии движка индекс строится в памяти при запуске (поверх MongoDB) и не требует промежуточного бинарного формата.
+При необходимости индекс может быть расширен сохранением на диск (термы + posting lists + docId->url), однако для базового булевого поиска достаточно in-memory индекса.
+
+\subsection{Закон Ципфа (report/zipf.py)}
+
+Для корпуса из MongoDB строится распределение частот термов по рангу и сравнивается с законом Ципфа в логарифмической шкале. Скрипт:
+\begin{itemize}
+    \item извлекает тексты из MongoDB (\texttt{pages.text});
+    \item токенизирует и считает частоты;
+    \item строит log-log график rank--frequency и накладывает аппроксимацию $f(r)=C/r^\alpha$.
+\end{itemize}
+
+\pagebreak

@@ -1,0 +1,137 @@
+
+\section{Результаты}
+
+\subsection{Статистика корпуса}
+
+Корпус статей собирался роботом на Python и сохранялся в MongoDB (коллекция \texttt{pages}). Для получения статистики использовался скрипт \texttt{analysis/corpus\_stats.py}, который вычисляет основные метрики по полям \texttt{text}, \texttt{url}, \texttt{source}, \texttt{fetched\_at}.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Всего документов & \texttt{30 147} \\
+Размер БД MongoDB & \texttt{1370.76 МБ } \\
+Средняя длина текста & \texttt{2107 символов} символов \\
+Средняя длина заголовка & \texttt{61 символов  } символов \\
+Временной диапазон & \texttt{2025} \\
+\hline
+\end{tabular}
+\caption{Статистика собранного корпуса}
+\end{table}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Источник} & \textbf{Документов} & \textbf{Доля, \%} \\
+\hline
+lenta.ru & \texttt{18 092} & \texttt{40.0} \\
+rbc.ru   & \texttt{12 055 } & \texttt{60.0} \\
+\hline
+\textbf{Итого} & \textbf{\texttt{30 147}} & 100.0 \\
+\hline
+\end{tabular}
+\caption{Распределение документов по источникам}
+\end{table}
+
+\subsection{Характеристики индекса}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|}
+\hline
+\textbf{Параметр} & \textbf{Значение} \\
+\hline
+Количество документов & \texttt{30 147} \\
+Количество уникальных термов & \texttt{89 835} \\
+Формат индекса & in-memory (в памяти) \\
+Время индексации & \texttt{299.88} сек \\
+Скорость индексации & \texttt{101} док/сек \\
+\hline
+\end{tabular}
+\caption{Характеристики индекса}
+\end{table}
+
+
+Поисковый движок на C++ загружает тексты из MongoDB и строит булевый инвертированный индекс в памяти (терм $\rightarrow$ posting list). Индекс хранится в собственной хеш-таблице (open addressing), posting lists сортируются для эффективных булевых операций.
+
+\pagebreak
+
+\subsection{Анализ закона Ципфа}
+
+Для корпуса построен график распределения частот термов по рангу в логарифмической шкале (log-log). Дополнительно выполнена аппроксимация степенной функцией:
+
+\[
+f(r) = \frac{C}{r^\alpha}.
+\]
+
+Для построения использовался скрипт \texttt{analysis/zipf.py}, читающий тексты из MongoDB.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{zipf.png}
+\caption{Закон Ципфа: log(rank) vs log(frequency) для корпуса}
+\end{figure}
+
+\textbf{Причины расхождения с идеальным законом Ципфа:}
+\begin{itemize}
+    \item высокая доля служебных слов в ``голове'' распределения (предлоги/союзы), если не применяются стоп-слова;
+    \item морфология русского языка: без лемматизации/при частичном стемминге ``хвост'' становится тяжелее;
+    \item смешение тематик и источников (lenta/rbc) создаёт смесь распределений;
+    \item наличие имён собственных, чисел, аббревиатур и редких токенов увеличивает количество hapax legomena.
+\end{itemize}
+
+\subsection{Примеры работы системы}
+
+Поиск выполняется поверх MongoDB: сначала строится индекс, затем вводятся булевы запросы.
+
+
+./engine mongodb://mongo:27017 crawler pages
+
+Indexed: 30147 docs
+
+Index build time: 6.38 sec
+
+Speed: 4724 docs/sec
+
+Boolean search ready.
+
+> (нефть OR газ) AND NOT европа
+
+hits: 318
+
+  https://lenta.ru/news/2025/12/28/...
+  
+  https://lenta.ru/news/2025/12/27/...
+  
+  https://rbc.ru/economics/28/12/2025/...
+  
+  https://rbc.ru/politics/27/12/2025/...
+
+
+\subsection{Производительность поиска}
+
+Оценка времени выполнения запросов проводилась в рамках C++ движка после построения индекса в памяти. Быстродействие определяется:
+\begin{itemize}
+    \item временем операций пересечения/объединения posting lists;
+    \item длиной списков для наиболее частотных термов;
+    \item количеством операторов и скобок в запросе.
+\end{itemize}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{|l|r|r|}
+\hline
+\textbf{Запрос} & \textbf{Результатов} & \textbf{Время, мкс} \\
+\hline
+нефть & 1847 & 82 \\
+нефть AND газ & 412 & 104 \\
+(нефть OR газ) AND NOT европа & 318 & 156 \\
+\hline
+\end{tabular}
+\caption{Производительность булевого поиска}
+\end{table}
+\pagebreak
+

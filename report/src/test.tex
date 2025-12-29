@@ -1,0 +1,134 @@
+
+\section{Тестирование системы}
+
+Для проверки корректности работы реализован набор unit- и интеграционных тестов, покрывающих ключевые компоненты: робота (сбор корпуса), движок (токенизация, стемминг, индекс, булев поиск) и работу поверх MongoDB.
+
+\subsection{Тестирование робота (Python)}
+
+\subsubsection{Корректность сохранения документа в MongoDB}
+\textbf{Цель:} убедиться, что робот сохраняет документ в коллекцию \texttt{pages} с корректными полями.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Запустить робота на ограниченном наборе URL (seed только на главную и одну статью).
+    \item Проверить наличие документа в \texttt{pages}.
+    \item Проверить наличие и типы полей: \texttt{url}, \texttt{text}, \texttt{source}, \texttt{fetched\_at}.
+    \item Проверить, что \texttt{text} не пустой и имеет длину > 200 символов.
+\end{enumerate}
+
+\textbf{Результат:} документ присутствует в \texttt{pages}, поля заполнены, текст извлечён корректно.
+
+\subsubsection{Возобновление работы после остановки}
+\textbf{Цель:} проверить требование ``робота можно остановить и продолжить''.
+
+\textbf{Шаги:}
+\begin{enumerate}
+    \item Запустить робота и дождаться заполнения \texttt{queue}.
+    \item Остановить контейнер робота.
+    \item Запустить контейнер робота снова.
+    \item Проверить, что робот продолжает обработку из очереди, а не начинает обход с нуля.
+\end{enumerate}
+
+\textbf{Результат:} URL продолжают обрабатываться из \texttt{queue}, повторной генерации полной очереди не происходит.
+
+\subsection{Unit-тесты поискового движка (C++)}
+
+Unit-тесты реализованы для модулей \texttt{Tokenizer} и \texttt{Stemmer} в отдельных файлах:
+\begin{itemize}
+    \item \texttt{tests/tokenizer\_tests.cpp}
+    \item \texttt{tests/stemmer\_tests.cpp}
+\end{itemize}
+\paragraph{}
+Общий Unit-тест, кратко для всех модулей
+\texttt{tests/stemmer\_tests.cpp} 
+
+\subsubsection{Тесты токенизатора}
+
+Покрываемые сценарии:
+\begin{itemize}
+    \item разделители: пробелы и пунктуация;
+    \item приведение к нижнему регистру (кириллица и латиница), нормализация \texttt{ё->е};
+    \item минимальная/максимальная длина токена (2..50);
+    \item сохранение числовых токенов;
+    \item пропуск URL и email (не индексируются);
+    \item обработка дефисов и апострофов, включая Unicode-символы (\texttt{—}, \texttt{–}, \texttt{’}).
+\end{itemize}
+
+\subsubsection{Тесты стеммера}
+
+Покрываемые сценарии:
+\begin{itemize}
+    \item английский Porter stemmer: классический набор примеров (caresses $\rightarrow$ caress, ponies $\rightarrow$ poni и т.п.);
+    \item русский Porter/Snowball stemmer: группы словоформ, которые должны приводиться к одной основе;
+    \item корректная работа на токенах с дефисом/апострофом (стемминг частей);
+    \item безопасная обработка чисел и смешанных токенов (стеммер не должен ``падать'').
+\end{itemize}
+
+
+\subsection{Результаты тестирования}
+
+Все unit-тесты для токенизации и стемминга, а также интеграционный сценарий ``движок поверх MongoDB'' выполнены успешно.
+
+Пример вывода unit-тестов:
+./tokenizer\_tests
+
+[OK]   basic\_separators\_and\_lower
+
+[OK]   numbers\_preserved
+
+[OK]   min\_max\_len
+
+[OK]   skip\_url\_and\_email
+
+[OK]   hyphen\_kept\_inside\_word\_and\_parts\_present
+
+[OK]   unicode\_dash\_is\_hyphen
+
+[OK]   apostrophe\_handling\_ascii\_and\_unicode
+
+[OK]   joiners\_at\_edges\_are\_delimiters
+
+[OK]   yo\_to\_e\_and\_cyrillic\_upper\_to\_lower
+
+ALL TOKENIZER TESTS PASSED
+\paragraph{}
+./stemmer\_tests
+
+[OK]   english\_porter\_classic\_set
+
+[OK]   russian\_same\_stem\_groups
+
+[OK]   hyphen\_apostrophe\_parts\_are\_stemmed
+
+[OK]   numbers\_and\_mixed\_tokens\_unchanged\_or\_safe
+
+ALL STEMMER TESTS PASSED
+\paragraph{}
+
+./general\_tests
+
+[OK]   tokenizer\_basic
+
+[OK]   tokenizer\_min\_max\_len
+
+[OK]   tokenizer\_skip\_url\_email
+
+[OK]   tokenizer\_hyphen\_apostrophe
+
+[OK]   stemmer\_english\_porter
+
+[OK]   stemmer\_russian\_porter
+
+[OK]   hashtable\_insert\_find
+
+[OK]   hashtable\_rehash
+[OK]   boolean\_index\_postings
+
+[OK]   boolean\_search\_and\_or\_not\_parentheses
+
+[OK]   boolean\_search\_implicit\_and
+
+ALL TESTS PASSED
+
+
+\pagebreak
